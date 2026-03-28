@@ -113,10 +113,10 @@ contract ReviewDAO is ReentrancyGuard {
          require(sbtContract.ownerOf(_tokenId) == msg.sender, "Not your SBT");
          require(sbtContract.isValidCredential(_tokenId), "SBT is revoked or invalid");
        
-       
+        require(reviewContract != address(0), "ReviewContract not set");
         require(!hasActiveProposal[_reviewId], "Proposal already exists for this review"); // ← 新增校验
         hasActiveProposal[_reviewId] = true; // ← 标记该 review 已进入治理流程
-        require(reviewContract != address(0), "ReviewContract not set");
+        
 
         uint32 currentTotalSupply = uint32(sbtContract.totalSupply()); 
 

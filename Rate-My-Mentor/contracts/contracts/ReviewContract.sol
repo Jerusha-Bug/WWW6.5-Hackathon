@@ -10,7 +10,7 @@ contract ReviewContract is Ownable {
 
 // ── 数据结构 (新增 5 个维度的存储) ───────────────────
     struct Review {
-        uint256 reviewId;       // 评价唯一 ID
+
         uint256 credentialId;   // 由哪个凭证发起 (对应 SBT 的 tokenId)
         bytes32 targetId;       // 评价对象 ID
         bytes32 cid;            // IPFS 地址
@@ -96,7 +96,6 @@ contract ReviewContract is Ownable {
         // 3. 存储评价
         uint256 currentReviewId = _reviewIdCounter++;
         reviews[currentReviewId] = Review({
-            reviewId: currentReviewId,
             credentialId: _credentialId,
             targetId: _targetId,
             overallScore: _overallScore,
@@ -124,33 +123,32 @@ contract ReviewContract is Ownable {
     // ── 申诉函数：未来由 DAO 调用 ─────────────────────
     function updateReviewStatus(uint256 _reviewId, uint8 _newStatus) external onlyOwner {
         Review storage r = reviews[_reviewId];
-        require(r.reviewId != 0, "Review does not exist");
+        require(r.credentialId != 0, "Review does not exist");
 
         ReviewStatus newStatusEnum = ReviewStatus(_newStatus); // ✅ 显式转换
         
         ReviewStatus oldStatus = r.status;
-        if (oldStatus == _newStatus) return;
+        if (oldStatus == newStatusEnum) return; // ✅ 使用转换后的枚举
         // 核心约束：只允许特定的状态流转
         require(
-        (oldStatus == ReviewStatus.Normal   && _newStatus == ReviewStatus.Disputed) ||
-        (oldStatus == ReviewStatus.Disputed && _newStatus == ReviewStatus.Normal)   ||
-        (oldStatus == ReviewStatus.Disputed && _newStatus == ReviewStatus.Revoked),
+        (oldStatus == ReviewStatus.Normal   && newStatusEnum == ReviewStatus.Disputed) || // ✅ 改为 newStatusEnum
+        (oldStatus == ReviewStatus.Disputed && newStatusEnum == ReviewStatus.Normal)   || // ✅ 改为 newStatusEnum
+        (oldStatus == ReviewStatus.Disputed && newStatusEnum == ReviewStatus.Revoked),    // ✅ 改为 newStatusEnum
         "Invalid status transition"
     );
 
-        r.status = _newStatus;
+        r.status = newStatusEnum; // ✅ 正确赋值
         bytes32 tId = r.targetId;
 
    
 
-        // 聚合分数动态增减
-        if (oldStatus == ReviewStatus.Normal && _newStatus != ReviewStatus.Normal) {
-            _decrementScore(tId, r.overallScore);
-        } else if (oldStatus != ReviewStatus.Normal && _newStatus == ReviewStatus.Normal) {
-            _incrementScore(tId, r.overallScore);
-        }
-
-        emit ReviewStatusUpdated(_reviewId, tId, oldStatus, _newStatus);
+      // 聚合分数动态增减
+      if (oldStatus == ReviewStatus.Normal && newStatusEnum != ReviewStatus.Normal) { // ✅ 改为 newStatusEnum
+      _decrementScore(tId, r.overallScore);
+      } else if (oldStatus != ReviewStatus.Normal && newStatusEnum == ReviewStatus.Normal) { // ✅ 改为 newStatusEnum
+      _incrementScore(tId, r.overallScore);
+      }
+        emit ReviewStatusUpdated(_reviewId, tId, oldStatus, newStatusEnum);
     }
 
     // 内部加减分逻辑...
