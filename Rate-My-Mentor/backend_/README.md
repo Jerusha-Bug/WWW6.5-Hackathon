@@ -19,6 +19,7 @@ Node.js + Express + TypeScript + OpenAI GPT-4o + Pinata IPFS
 - 声誉看板相关：`/reputation`
 - 合约交互相关：`/contract`
 
+```bash
 backend/
 ├── .env.example              # 环境变量示例（不上传Git，仅本地填写）
 ├── .gitignore                # Git忽略规则文件
@@ -64,4 +65,5 @@ backend/
         ├── reputation.routes.ts
         ├── contract.routes.ts
         └── index.ts           # 路由总入口
->>>>>>> f459229 (后端代码)
+```
+
