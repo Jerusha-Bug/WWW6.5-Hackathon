@@ -7,7 +7,7 @@ import { getContract } from "thirdweb";
 import { useActiveAccount, useReadContract } from "thirdweb/react";
 import { client } from "@/lib/thirdweb-client";
 
-const HUT_CONTRACT_ADDRESS = "0xa7791A383491871a4f29EC0804bBD884957689F2";
+const HUT_CONTRACT_ADDRESS = "0xFe33db86B9d73DE2EeA4290A41fca2Cfdc90E71D";
 const IPFS_GATEWAY = "https://gateway.pinata.cloud/ipfs/";
 
 const hutContract = getContract({
@@ -20,7 +20,7 @@ const hutContract = getContract({
 function ArchivePostItem({ index, userAddress }: { index: number; userAddress: string }) {
   const { data: record, isLoading } = useReadContract({
     contract: hutContract,
-    method: "function records(uint256) view returns (string cid, address author, uint256 timestamp, bool isHelp, bool isDonation)",
+    method: "function records(uint256) view returns (string cid, address author, uint256 timestamp, bool isHelp, bool isDonation, uint8 postType, uint256 price)",
     params: [BigInt(index)],
   });
 
@@ -67,9 +67,16 @@ function ArchivePostItem({ index, userAddress }: { index: number; userAddress: s
           postContent || "（无文字内容）"
         )}
       </div>
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         {record[3] && <span className="rounded-full bg-pink-100 px-2 py-0.5 text-xs text-pink-700">求助贴</span>}
         {record[4] && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">捐赠/申领</span>}
+        {record[5] === 0 && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-600">免费公开</span>}
+        {record[5] === 1 && (
+          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-600">
+            收费 {(Number(record[6]) / 1e18).toFixed(0)} MOON
+          </span>
+        )}
+        {record[5] === 2 && <span className="rounded-full bg-purple-50 px-2 py-0.5 text-xs text-purple-600">🔒 隐私</span>}
       </div>
     </div>
   );

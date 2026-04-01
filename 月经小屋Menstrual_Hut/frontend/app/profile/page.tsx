@@ -10,7 +10,7 @@ import { getIdentityForWallet, HutIdentityRecord } from "@/lib/hut-identity-stor
 import { hutConnectButtonClassName, hutConnectTheme } from "@/lib/thirdweb-connect-theme";
 
 const MOON_TOKEN_ADDRESS = "0x0e99AE008922E4547EE0e35388a0a4FD907C6c01";
-const HUT_CONTRACT_ADDRESS = "0xa7791A383491871a4f29EC0804bBD884957689F2";
+const HUT_CONTRACT_ADDRESS = "0xFe33db86B9d73DE2EeA4290A41fca2Cfdc90E71D";
 
 const hutContract = getContract({
   client,

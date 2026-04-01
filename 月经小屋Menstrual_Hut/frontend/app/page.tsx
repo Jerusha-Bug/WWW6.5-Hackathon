@@ -22,34 +22,58 @@ import {
 } from "@/lib/thirdweb-connect-theme";
 
 const MOON_TOKEN_ADDRESS = "0x0e99AE008922E4547EE0e35388a0a4FD907C6c01";
-const HUT_CONTRACT_ADDRESS = "0xa7791A383491871a4f29EC0804bBD884957689F2";
+const HUT_CONTRACT_ADDRESS = "0xFe33db86B9d73DE2EeA4290A41fca2Cfdc90E71D";
+
+const moonTokenContract = getContract({
+  client,
+  chain: avalancheFuji,
+  address: MOON_TOKEN_ADDRESS,
+});
 
 // 常量：IPFS 访问网关
 const IPFS_GATEWAY = "https://gateway.pinata.cloud/ipfs/"; // 若遇到网络问题可换成 "https://ipfs.io/ipfs/"
 
 // --- 新增：单条真实帖子组件 ---
 function PostItem({ index, locale }: { index: number; locale: string }) {
-  // 1. 读取合约中 records 数组指定 index 的数据
+  // ① 读取合约记录（新增 postType uint8 和 price uint256）
   const { data: record, isLoading } = useReadContract({
     contract: hutContract,
-    method: "function records(uint256) view returns (string cid, address author, uint256 timestamp, bool isHelp, bool isDonation)",
+    method: "function records(uint256) view returns (string cid, address author, uint256 timestamp, bool isHelp, bool isDonation, uint8 postType, uint256 price)",
     params: [BigInt(index)],
   });
 
   const [postContent, setPostContent] = useState<string>("");
   const [isFetchingIpfs, setIsFetchingIpfs] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);   // 新增：解锁中状态
+  const [unlockError, setUnlockError] = useState("");   // 新增：解锁错误提示
 
+  const account = useActiveAccount();                   // 新增：当前钱包
+  const viewerAddress = account?.address;
+  const { mutateAsync: sendTransaction } = useSendTransaction(); // 新增：发交易
+
+  // ② 读取当前用户是否有权限查看（仅收费帖需要，其余直接 true）
+  const { data: canView, refetch: refetchCanView } = useReadContract({
+    contract: hutContract,
+    method: "function canViewRecord(uint256 _recordId, address _viewer) view returns (bool)",
+    params: [BigInt(index), viewerAddress ?? "0x0000000000000000000000000000000000000000"],
+    queryOptions: {
+      // 只有收费帖且钱包已连接时才查链
+      enabled: !!viewerAddress && record?.[5] === 1,
+    },
+  });
+
+  // 是否可以直接看内容：免费帖(0)/隐私帖(2)由内容本身决定；收费帖(1)看 canView
+  const isUnlocked = !record || record[5] !== 1 || (canView ?? false) || record[1].toLowerCase() === viewerAddress?.toLowerCase();
+
+  // ③ 拉取 IPFS 内容（已解锁才拉，避免白拉）
   useEffect(() => {
-    if (record && record[0]) {
+    if (record && record[0] && isUnlocked) {
       const cid = record[0];
       setIsFetchingIpfs(true);
-      // 2. 根据 CID 从 IPFS 抓取 JSON 内容
       fetch(`${IPFS_GATEWAY}${cid}`)
         .then((res) => res.json())
         .then((data) => {
-          if (data && data.content) {
-            setPostContent(data.content);
-          }
+          if (data && data.content) setPostContent(data.content);
         })
         .catch((err) => {
           console.error("Fetch IPFS error:", err);
@@ -57,30 +81,122 @@ function PostItem({ index, locale }: { index: number; locale: string }) {
         })
         .finally(() => setIsFetchingIpfs(false));
     }
-  }, [record, locale]);
+  }, [record, locale, isUnlocked]);
+
+  // ④ 解锁函数：approve → viewPaidRecord（两步交易）
+  const handleUnlock = async () => {
+    if (!viewerAddress || !record) return;
+    setUnlocking(true);
+    setUnlockError("");
+    try {
+      const priceWei = record[6] as bigint;
+
+      // 第一步：授权 MenstrualHut 合约花费 MOON
+      const approveTx = prepareContractCall({
+        contract: moonTokenContract,
+        method: "function approve(address spender, uint256 amount) returns (bool)",
+        params: [HUT_CONTRACT_ADDRESS, priceWei],
+      });
+      await sendTransaction(approveTx);
+
+      // 第二步：调用付费查看，合约内完成转账
+      const viewTx = prepareContractCall({
+        contract: hutContract,
+        method: "function viewPaidRecord(uint256 _recordId) public",
+        params: [BigInt(index)],
+      });
+      await sendTransaction(viewTx);
+
+      // 刷新权限状态，触发内容拉取
+      await refetchCanView();
+    } catch (e) {
+      console.error("解锁失败", e);
+      if (e instanceof Error) {
+        if (e.message.includes("user rejected") || e.message.includes("User denied")) {
+          setUnlockError(locale === "zh" ? "已取消交易" : "Transaction cancelled");
+        } else {
+          setUnlockError(locale === "zh" ? `解锁失败：${e.message.slice(0, 60)}` : `Unlock failed: ${e.message.slice(0, 60)}`);
+        }
+      }
+    } finally {
+      setUnlocking(false);
+    }
+  };
 
   if (isLoading) {
-    return <div className="rounded-xl bg-white p-3 text-sm text-[#4c1d95]/50 animate-pulse">正在加载链上数据...</div>;
+    return (
+      <div className="rounded-xl bg-white p-3 text-sm text-[#4c1d95]/50 animate-pulse">
+        正在加载链上数据...
+      </div>
+    );
   }
 
   if (!record) return null;
 
+  // 隐私帖：不显示在公开列表中
+  if (record[5] === 2) return null;
+
   const authorShort = `${record[1].slice(0, 6)}...${record[1].slice(-4)}`;
   const dateStr = new Date(Number(record[2]) * 1000).toLocaleString();
+  const priceDisplay = (Number(record[6]) / 1e18).toFixed(0);
 
   return (
     <div className="rounded-xl bg-white p-4 text-sm text-[#4c1d95] shadow-sm transition hover:shadow-md">
+      {/* 作者 + 时间 */}
       <div className="mb-2 flex items-center justify-between text-xs text-[#9f1239]/60">
         <span className="font-mono bg-pink-50 px-2 py-0.5 rounded-md">{authorShort}</span>
         <span>{dateStr}</span>
       </div>
+
+      {/* 内容区：收费未解锁显示付费墙，其余正常显示 */}
       <div className="whitespace-pre-wrap leading-relaxed">
-        {isFetchingIpfs ? (
-          <span className="animate-pulse text-[#9f1239]/60">
-            {locale === "zh" ? "正在从 IPFS 解析感受..." : "Fetching from IPFS..."}
-          </span>
+        {record[5] === 1 && !isUnlocked ? (
+          // 付费墙
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <p className="text-sm text-[#9f1239]/70">
+              🔒 这是一篇收费经验贴，需要 {priceDisplay} MOON 才能阅读
+            </p>
+            {!viewerAddress ? (
+              <p className="text-xs text-[#9f1239]/50">请先连接钱包</p>
+            ) : (
+              <button
+                onClick={handleUnlock}
+                disabled={unlocking}
+                className="rounded-xl bg-gradient-to-r from-[#f472b6] to-[#d946ef] px-5 py-2 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {unlocking ? "处理中（共需 2 次确认）…" : `花 ${priceDisplay} MOON 解锁`}
+              </button>
+            )}
+            {unlockError && (
+              <p className="text-xs text-rose-600">{unlockError}</p>
+            )}
+          </div>
         ) : (
-          postContent || "（无文字内容）"
+        <>
+          {/* 作者看自己的收费帖时，加一个提示 */}
+          {record[5] === 1 && record[1].toLowerCase() === viewerAddress?.toLowerCase() && (
+            <p className="mb-2 text-xs text-amber-600 bg-amber-50 rounded-lg px-2 py-1">
+              👑 你是作者，免费查看 · 其他姐妹需付 {priceDisplay} MOON
+            </p>
+          )}
+          {isFetchingIpfs ? (
+            <span className="animate-pulse text-[#9f1239]/60">正在从 IPFS 解析感受...</span>
+          ) : (
+            postContent || "（无文字内容）"
+          )}
+        </>
+        )}
+      </div>
+
+      {/* 类型徽章 */}
+      <div className="mt-2 flex gap-2">
+        {record[5] === 0 && (
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">免费公开</span>
+        )}
+        {record[5] === 1 && (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+            收费 {priceDisplay} MOON
+          </span>
         )}
       </div>
     </div>
@@ -335,6 +451,7 @@ const [periodDetailOpen, setPeriodDetailOpen] = useState(false);
   const textFileInputRef = useRef<HTMLInputElement>(null);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [identityRev, setIdentityRev] = useState(0);
+  const [paidPrice, setPaidPrice] = useState<string>("5");
 
   const walletAddrLower = account?.address?.toLowerCase() ?? "";
   const identityRegistered = useMemo(() => {
@@ -411,10 +528,16 @@ const [periodDetailOpen, setPeriodDetailOpen] = useState(false);
       setUploadPhase("chain");
 
       // 步骤 2：构造智能合约调用
+      const postTypeMap: Record<ShareMode, number> = { free: 0, paid: 1, private: 2 };
+      const priceInWei =
+        shareMode === "paid"
+          ? BigInt(Math.floor(parseFloat(paidPrice || "0") * 1e18))
+          : BigInt(0);
+
       const transaction = prepareContractCall({
         contract: hutContract,
-        method: "function uploadRecord(string memory _cid, bool _isHelp, bool _isDonation) public",
-        params: [cid, false, false],
+        method: "function uploadRecord(string memory _cid, bool _isHelp, bool _isDonation, uint8 _postType, uint256 _price) public",
+        params: [cid, false, false, postTypeMap[shareMode], priceInWei],
       });
 
       // 步骤 3：唤起钱包签名并发送上链
@@ -853,6 +976,24 @@ const [periodDetailOpen, setPeriodDetailOpen] = useState(false);
               <span>{t("radioPrivate")}</span>
             </label>
           </div>
+          {shareMode === "paid" && (
+            <div className="rounded-xl border border-pink-200 bg-white/80 px-3 py-2">
+              <label className="mb-1 block text-xs text-[#9f1239]/70">
+                设置阅读价格（MOON 代币数量）
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={paidPrice}
+                onChange={(e) => setPaidPrice(e.target.value)}
+                disabled={isUploading}
+                className="w-full rounded-lg border border-pink-100 bg-white px-3 py-2 text-sm text-[#4c1d95] outline-none focus:ring-2 focus:ring-[#d946ef]/40"
+                placeholder="例如：5"
+              />
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleHutUpload}
