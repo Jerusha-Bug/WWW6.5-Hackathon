@@ -1,142 +1,123 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import QuizScreen from "@/components/quiz/QuizScreen";
-import QuizResult from "@/components/quiz/QuizResult";
-import TieBreak from "@/components/quiz/TieBreak";
-import PixelDialog from "@/components/ui/PixelDialog";
+import { useState } from "react";
+import StartMenu from "@/components/menu/StartMenu";
+import HomePage from "@/components/home/HomePage";
+import FlashbackScreen from "@/components/flashback/FlashbackScreen";
+import DomainGameScreen from "@/components/domain/DomainGameScreen";
+import NFTShop from "@/components/nft/NFTShop";
 import AudioToggle from "@/components/ui/AudioToggle";
-import DomainScreen from "@/components/domain/DomainScreen";
 import { useGameAudio } from "@/hooks/useGameAudio";
-import { calcScores, getWinners } from "@/data/questions";
-import type { GameState, Domain } from "@/types/game";
+import { useGameSave } from "@/hooks/useGameSave";
+import type { Leader } from "@/types/flashback";
+
+type PageState = "start" | "home" | "flashback" | "domain" | "nft-shop";
 
 export default function Home() {
-  const [gameState, setGameState] = useState<GameState>("intro");
-  const [domain, setDomain] = useState<Domain | null>(null);
-  const [tiedCandidates, setTiedCandidates] = useState<Domain[]>([]);
+  const [pageState, setPageState] = useState<PageState>("start");
+  const [leader, setLeader] = useState<Leader | null>(null);
   const { muted, setMuted, setScene } = useGameAudio();
+  const { newGame: clearSave } = useGameSave();
 
-  useEffect(() => {
-    if (gameState === "intro" || gameState === "quiz") {
-      setScene("intro");
-    } else if ((gameState === "result" || gameState === "domain") && domain) {
-      setScene(domain);
-    }
-  }, [gameState, domain, setScene]);
-
-  function handleQuizComplete(answers: Record<number, string>) {
-    const scores = calcScores(answers);
-    const winners = getWinners(scores);
-    if (winners.length === 1) {
-      setDomain(winners[0]);
-      setGameState("result");
-    } else {
-      setTiedCandidates(winners);
-      setGameState("tiebreak");
-    }
-  }
-
-  function handleTieBreakChoose(chosen: Domain) {
-    setDomain(chosen);
-    setGameState("result");
-  }
-
-  function handleEnterDomain() {
-    setGameState("domain");
-  }
-
-  function handleMilestoneEnter() {
-    // M3 placeholder
-    alert("里程碑事件即将开启（模块三开发中）");
-  }
-
-  function handleRestart() {
-    setDomain(null);
-    setTiedCandidates([]);
-    setGameState("intro");
-  }
-
-  function handleStart() {
+  function handleNewGame() {
+    clearSave();
+    setLeader(null);
     setScene("intro");
-    setGameState("quiz");
+    setPageState("flashback");
+  }
+
+  function handleContinueGame(
+    savedLeader: Leader | null,
+    savedPageState: PageState
+  ) {
+    setLeader(savedLeader);
+    if (savedPageState === "home" && savedLeader) {
+      setPageState("home");
+    } else if (savedPageState === "domain" && savedLeader) {
+      setPageState("domain");
+    } else if (savedPageState === "nft-shop" && savedLeader) {
+      setPageState("nft-shop");
+    } else {
+      setPageState("flashback");
+    }
+  }
+
+  function handleExitGame() {
+    // Reset and go back to start menu
+    setPageState("start");
+    setLeader(null);
+  }
+
+  function handleStartFlashback() {
+    setScene("intro");
+    setPageState("flashback");
+  }
+
+  function handleFlashbackComplete(selectedLeader: Leader) {
+    setLeader(selectedLeader);
+    setScene("law"); // Domain game background music
+    setPageState("domain");
+  }
+
+  function handleContinueFromHome() {
+    setScene("law"); // Domain game background music
+    setPageState("domain");
+  }
+
+  function handleGoToNFTShop() {
+    setPageState("nft-shop");
+  }
+
+  function handleBackHome() {
+    setPageState("home");
+  }
+
+  function handleBackToDomain() {
+    setPageState("domain");
+  }
+
+  function handleBackToMenu() {
+    setPageState("start");
+    setLeader(null);
   }
 
   return (
     <>
       <AudioToggle muted={muted} onToggle={() => setMuted((m) => !m)} />
 
-      {gameState === "quiz" && (
-        <QuizScreen onComplete={handleQuizComplete} />
+      {pageState === "start" && (
+        <StartMenu
+          onNewGame={handleNewGame}
+          onContinue={handleContinueGame}
+          onExit={handleExitGame}
+        />
       )}
 
-      {gameState === "tiebreak" && (
-        <TieBreak candidates={tiedCandidates} onChoose={handleTieBreakChoose} />
+      {pageState === "home" && leader && (
+        <HomePage
+          onStartGame={handleContinueFromHome}
+          leader={leader}
+          onBackToMenu={handleBackToMenu}
+        />
       )}
 
-      {gameState === "result" && domain && (
-        <div>
-          <QuizResult domain={domain} onEnter={handleEnterDomain} />
-          <div className="flex justify-center pb-8">
-            <button
-              onClick={handleRestart}
-              className="text-game-muted text-[7px] underline underline-offset-4 hover:text-game-text transition-colors"
-            >
-              重新开始
-            </button>
-          </div>
-        </div>
+      {pageState === "flashback" && (
+        <FlashbackScreen onComplete={handleFlashbackComplete} />
       )}
 
-      {gameState === "domain" && domain && (
-        <DomainScreen domain={domain} onMilestoneEnter={handleMilestoneEnter} />
+      {pageState === "domain" && leader && (
+        <DomainGameScreen
+          leader={leader}
+          onGoToNFTShop={handleGoToNFTShop}
+          onBackHome={handleBackHome}
+        />
       )}
 
-      {gameState === "intro" && (
-        <div className="flex flex-col items-center justify-center min-h-screen p-4 gap-8">
-          <div className="text-center">
-            <h1 className="text-[18px] text-white leading-relaxed tracking-widest mb-2">
-              HerPath
-            </h1>
-            <p className="text-game-muted text-[8px] tracking-widest">
-              她的轨迹
-            </p>
-          </div>
-
-          <PixelDialog className="w-full max-w-md text-center">
-            <p className="text-[7px] text-game-muted mb-4 tracking-widest">
-              ── 序 ──
-            </p>
-            <p className="text-game-text text-[9px] leading-loose mb-6">
-              在每个时代，
-              <br />
-              都有女性用她们的方式
-              <br />
-              撬动了世界。
-              <br />
-              <br />
-              <span className="text-game-muted text-[8px]">
-                你会走哪条路？
-              </span>
-            </p>
-
-            <button
-              onClick={handleStart}
-              className="pixel-btn w-full py-3 text-[9px]"
-              style={{
-                borderColor: "#a0a0ff",
-                backgroundColor: "#12122a",
-                color: "#a0a0ff",
-              }}
-            >
-              ▶ 开始游戏
-            </button>
-          </PixelDialog>
-
-          <p className="text-game-muted text-[6px] tracking-widest">
-            © HerPath · WWW6.5 Hackathon
-          </p>
-        </div>
+      {pageState === "nft-shop" && leader && (
+        <NFTShop
+          leader={leader}
+          onBack={handleBackToDomain}
+        />
       )}
     </>
   );
