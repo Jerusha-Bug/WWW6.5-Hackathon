@@ -45,6 +45,13 @@ type AIReviewResult = {
 type DialogState = null | "confirm_mint" | "ai_extract_failed";
 type Phase = "input" | "extracting" | "review_ai_result" | "submitting" | "submitted";
 
+// 强制类型为 Phase 以解决严格的字面量类型检查
+const INPUT_PHASE: Phase = "input";
+const EXTRACTING_PHASE: Phase = "extracting";
+const SUBMITTING_PHASE: Phase = "submitting";
+const REVIEW_AI_RESULT_PHASE: Phase = "review_ai_result";
+const SUBMITTED_PHASE: Phase = "submitted";
+
 const DIM_LABELS = ["成长支持", "预期清晰度", "沟通质量", "工作强度", "尊重与包容"] as const;
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:3001/api/v1";
 
@@ -259,7 +266,7 @@ export default function ReviewPage() {
     );
   }
 
-  if (phase === "submitted") {
+  if (phase === SUBMITTED_PHASE) {
     return (
       <div className="mx-auto w-full max-w-lg px-4 py-20">
         <Card className="space-y-4 p-8 text-center">
@@ -297,7 +304,7 @@ export default function ReviewPage() {
     );
   }
 
-  if (phase === "input") {
+  if (phase === INPUT_PHASE) {
     return (
       <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-12">
         <div>
@@ -387,9 +394,9 @@ export default function ReviewPage() {
           className="w-full"
           size="lg"
           onClick={handleExtractAI}
-          disabled={!targetName.trim() || reviewText.trim().length < 20 || phase === "extracting"}
+          disabled={!targetName.trim() || reviewText.trim().length < 20 || phase === EXTRACTING_PHASE}
         >
-          {phase === "extracting" ? (
+          {phase === EXTRACTING_PHASE ? (
             <span className="flex items-center gap-2">
               <Spinner />
               AI 正在分析…
@@ -406,7 +413,7 @@ export default function ReviewPage() {
     );
   }
 
-  if (phase === "review_ai_result" && aiResult) {
+  if (phase === REVIEW_AI_RESULT_PHASE && aiResult) {
     return (
       <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-12">
         <div>
@@ -507,7 +514,7 @@ export default function ReviewPage() {
           <Button
             className="flex-1"
             onClick={handleSubmit}
-            disabled={isPending || isConfirming || phase === "submitting"}
+            disabled={isPending || isConfirming || phase === SUBMITTING_PHASE}
           >
             {isPending || isConfirming ? (
               <span className="flex items-center gap-2">
@@ -527,7 +534,7 @@ export default function ReviewPage() {
     );
   }
 
-  if (phase === "submitting") {
+  if (phase === SUBMITTING_PHASE) {
     return (
       <div className="mx-auto w-full max-w-lg space-y-4 px-4 py-20 text-center">
         <Spinner />
