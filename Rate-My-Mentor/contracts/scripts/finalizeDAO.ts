@@ -2,8 +2,8 @@ import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 dotenv.config();
 
-const DAO_ADDRESS = "0x481D0fd5a05eEdc6971c165BBC2D2aB1a2Dce744";
-const REVIEW_CONTRACT_ADDRESS = "0x3845300491F10FC8C87694C5c8D7D62bFc12e1DC";
+const DAO_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+const REVIEW_CONTRACT_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 
 const DAO_ABI = [
   "function finalizeProposal(uint32 proposalId) external",

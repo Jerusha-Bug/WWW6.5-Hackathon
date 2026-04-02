@@ -19,10 +19,6 @@ Node.js + Express + TypeScript + OpenAI GPT-4o + Pinata IPFS
 - 声誉看板相关：`/reputation`
 - 合约交互相关：`/contract`
 
-<<<<<<< HEAD
-=======
-```bash
->>>>>>> 04d6931b6f3ff54d0864ea7d82069bf512b33508
 backend/
 ├── .env.example              # 环境变量示例（不上传Git，仅本地填写）
 ├── .gitignore                # Git忽略规则文件
