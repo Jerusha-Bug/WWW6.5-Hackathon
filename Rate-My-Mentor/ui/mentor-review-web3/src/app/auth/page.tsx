@@ -254,7 +254,7 @@ export default function AuthPage() {
       {/* Step 2: Mint SBT */}
       {(phase === "ready_to_mint" || phase === "minting") && credential && (
         <Card className="p-5 space-y-4">
-          <StepLabel step={2} label="铸造实习 SBT" done={false} />
+          <StepLabel step={2} label="铸造实习 SBT（可选）" done={false} />
 
           <div className="bg-muted/40 rounded-lg p-3 text-sm space-y-1">
             <div className="flex justify-between">
@@ -272,20 +272,30 @@ export default function AuthPage() {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            点击铸造后 MetaMask 会弹出确认，Gas 费约 0.001 AVAX（Fuji 测试网可免费领取）。
+            点击铸造后 MetaMask 会弹出确认，Gas 费约 0.001 AVAX（Fuji 测试网可免费领取）。<br />
+            也可以先跳过，在提交评价时再铸造。
           </p>
 
-          <Button
-            className="w-full"
-            onClick={handleMint}
-            disabled={phase === "minting" || isPending}
-          >
-            {phase === "minting" || isPending ? (
-              <span className="flex items-center gap-2"><Spinner />铸造中…</span>
-            ) : (
-              "铸造 SBT 凭证"
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              className="flex-1"
+              onClick={handleMint}
+              disabled={phase === "minting" || isPending}
+            >
+              {phase === "minting" || isPending ? (
+                <span className="flex items-center gap-2"><Spinner />铸造中…</span>
+              ) : (
+                "铸造 SBT"
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => router.push("/review")}
+            >
+              跳过，去评价 →
+            </Button>
+          </div>
 
           {writeError && (
             <p className="text-xs text-red-500">{writeError.message}</p>

@@ -59,6 +59,17 @@ export class AuthService {
 
   // 3. OCR识别Offer Letter，提取公司信息
   static async extractOfferInfo(base64Image: string): Promise<OfferOCRResult> {
+    // TODO: hackathon demo mode - AI verification temporarily mocked as always pass
+    // 最节制修复：当未配置 OPENAI_API_KEY 时，直接返回“通过”的占位结果，
+    // 避免 getOpenAIClient() 触发 requireEnv 抛错，从而保证上传->验证->签发->铸造SBT 全链路可跑通。
+    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.trim().length === 0) {
+      return {
+        companyName: 'Hackathon Demo Company',
+        isValid: true,
+        expireDate: '',
+      };
+    }
+
     const OPENAI_MODEL = getEnv('OPENAI_MODEL', 'gpt-4o');
     const response = await getOpenAIClient().chat.completions.create({
       model: OPENAI_MODEL,
@@ -103,7 +114,14 @@ export class AuthService {
     userAddress: string,
     ocrResult: OfferOCRResult
   ): Promise<IssuedCredential> {
-    const { BACKEND_PRIVATE_KEY } = requireEnv(['BACKEND_PRIVATE_KEY'] as const);
+    // 優先用 BACKEND_PRIVATE_KEY，沒有則降級到 AVALANCHE_PRIVATE_KEY（與 hackathon 腳本一致）
+    const privateKey =
+      process.env.BACKEND_PRIVATE_KEY?.trim() ||
+      process.env.AVALANCHE_PRIVATE_KEY?.trim();
+    if (!privateKey) {
+      throw new Error('缺少後端簽名私鑰，請在 .env 中配置 BACKEND_PRIVATE_KEY 或 AVALANCHE_PRIVATE_KEY');
+    }
+    const BACKEND_PRIVATE_KEY = privateKey;
 
     const credentialId = crypto.randomUUID();
     const companyId = ocrResult.companyName

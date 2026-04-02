@@ -25,6 +25,7 @@ export const upload = multer({
 export class AuthController {
   static async submitOffer(req: Request, res: Response) {
     try {
+      console.log('DEMO MOCK submitOffer is running');
       const file = req.file;
       const { userAddress } = req.body;
 
@@ -38,17 +39,14 @@ export class AuthController {
         return res.status(400).json(errorResponse('钱包地址格式不正确'));
       }
 
-      // OCR 识别
-      const base64Image = file.buffer.toString('base64');
-      const ocrResult = await AuthService.extractOfferInfo(base64Image);
-
-      if (!ocrResult.isValid) {
-        return res.status(422).json(
-          errorResponse(
-            '未识别为有效的入职/实习 Offer Letter，请确保图片清晰、内容完整，然后重新上传'
-          )
-        );
-      }
+      // TODO: hackathon demo mode - AI verification temporarily mocked as always pass
+      // 说明：为确保前端流程不变（仍需上传图片/点击验证），这里只跳过 OpenAI OCR 真伪判断，
+      // 但仍然走后续签发凭证（包含链上 mintSBT 所需签名），从而保证 SBT 铸造逻辑不被破坏。
+      const ocrResult = {
+        companyName: 'Hackathon Demo Company',
+        isValid: true,
+        expireDate: '',
+      };
 
       // 签发链上凭证
       const credential = await AuthService.issueCredential(userAddress, ocrResult);
