@@ -5,4 +5,4 @@
 | 文件 | 说明 |
 |------|------|
 | [README.en.md](./README.en.md) | 项目英文说明 |
-| [VERCEL_DEPLOY.md](./VERCEL_DEPLOY.md) | Vercel 部署（Root Directory 指向 `src/ui`） |
+| [VERCEL_DEPLOY.md](./VERCEL_DEPLOY.md) | Vercel 部署（Root Directory 指向 `ui`） |

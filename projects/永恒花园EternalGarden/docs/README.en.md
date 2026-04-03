@@ -47,14 +47,14 @@ This repository is an **MVP / demo** implementation: some flows are simulated or
 | Web3 | wagmi, viem, RainbowKit |
 | Chain | Avalanche Fuji (testnet); the plan also mentions L2 / Polygon for future scaling |
 | Styling | Tailwind CSS |
-| Static copy | `src/ui/static-web/` — plain HTML/CSS/JS for static hosting or teaching |
+| Static copy | `ui/static-web/` — plain HTML/CSS/JS for static hosting or teaching |
 
 ---
 
 ## Local Development
 
 ```bash
-cd projects/永恒花园EternalGarden/src/ui
+cd projects/永恒花园EternalGarden/ui
 npm install
 npm run dev
 ```
@@ -72,7 +72,7 @@ npm start
 
 ## Deployment (Vercel)
 
-If the Git repo is a monorepo, set Vercel **Root Directory** to **`projects/永恒花园EternalGarden/src/ui`**. See [VERCEL_DEPLOY.md](./VERCEL_DEPLOY.md).
+If the Git repo is a monorepo, set Vercel **Root Directory** to **`projects/永恒花园EternalGarden/ui`**. See [VERCEL_DEPLOY.md](./VERCEL_DEPLOY.md).
 
 ---
 
@@ -90,9 +90,9 @@ The full narrative is in the Chinese business plan document: *「永恒花园」
 
 | Path | Role |
 |------|------|
-| `src/ui/app/` | Next.js routes and UI |
-| `src/ui/static-web/` | Static HTML/JS variant without the Next toolchain |
-| `src/contracts/` | Solidity contracts |
+| `ui/app/` | Next.js routes and UI |
+| `ui/static-web/` | Static HTML/JS variant without the Next toolchain |
+| `contracts/` | Solidity contracts |
 | `docs/` | Docs and deployment notes |
 
 ---

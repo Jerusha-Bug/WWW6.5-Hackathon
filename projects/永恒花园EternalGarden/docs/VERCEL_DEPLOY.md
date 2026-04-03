@@ -1,17 +1,17 @@
 # 永恒花园 · Vercel 部署（GitHub 仓库）
 
-Next.js 应用根目录为 **`projects/永恒花园EternalGarden/src/ui`**。仓库整体是 monorepo 时，必须在 Vercel 里指定 **Root Directory**，否则会找不到 `package.json`。
+Next.js 应用根目录为 **`projects/永恒花园EternalGarden/ui`**。仓库整体是 monorepo 时，必须在 Vercel 里指定 **Root Directory**，否则会找不到 `package.json`。
 
 ## 1. 把代码推到 GitHub
 
-确保仓库已 push，且包含 `projects/永恒花园EternalGarden/src/ui/` 下的 `package.json`。
+确保仓库已 push，且包含 `projects/永恒花园EternalGarden/ui/` 下的 `package.json`。
 
 ## 2. 在 Vercel 新建项目
 
 1. 打开 [vercel.com](https://vercel.com) 并登录（可用 GitHub 账号）。
 2. **Add New… → Project → Import** 你的 Git 仓库。
 3. 在 **Configure Project** 页面找到 **Root Directory**：
-   - 点 **Edit**，选或手动填写 **`projects/永恒花园EternalGarden/src/ui`**。
+   - 点 **Edit**，选或手动填写 **`projects/永恒花园EternalGarden/ui`**。
 4. **Framework Preset** 应自动识别为 **Next.js**；若无，请手动选 Next.js。
 5. **Build Command**：`npm run build`（默认即可）  
    **Output Directory**：留空（Next 由平台处理）  
@@ -33,8 +33,8 @@ Next.js 应用根目录为 **`projects/永恒花园EternalGarden/src/ui`**。仓
 
 | 现象 | 处理 |
 |------|------|
-| Build 报找不到 `package.json` | 确认 Root Directory 为 **`projects/永恒花园EternalGarden/src/ui`** |
-| 构建失败与 Node 版本有关 | `src/ui` 下已写 `engines.node`；也可在 Vercel → Settings → Node.js Version 选 20.x |
+| Build 报找不到 `package.json` | 确认 Root Directory 为 **`projects/永恒花园EternalGarden/ui`** |
+| 构建失败与 Node 版本有关 | `ui` 下已写 `engines.node`；也可在 Vercel → Settings → Node.js Version 选 20.x |
 | 环境变量 | 若日后把 WalletConnect `projectId` 挪到环境变量，在 Vercel → Settings → Environment Variables 添加 |
 
 ## 6. 关于生产构建（Webpack）
